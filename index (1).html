@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <title>Möteskostnadskalkylator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 1.5rem;
+      background: #0f172a;
+      color: #e5e7eb;
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      max-width: 800px;
+      width: 100%;
+      background: #020617;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.7);
+      border: 1px solid #1f2937;
+    }
+    h1 {
+      margin-top: 0;
+      margin-bottom: 0.25rem;
+      font-size: 1.6rem;
+    }
+    p.subtitle {
+      margin-top: 0;
+      margin-bottom: 1rem;
+      color: #9ca3af;
+      font-size: 0.95rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+    @media (min-width: 640px) {
+      .grid {
+        grid-template-columns: 1.1fr 1fr;
+      }
+    }
+    .card {
+      background: #020617;
+      border-radius: 0.75rem;
+      border: 1px solid #1f2937;
+      padding: 1rem;
+    }
+    .card h2 {
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+      font-size: 1.05rem;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: #9ca3af;
+      margin-bottom: 0.25rem;
+    }
+    input, select, textarea {
+      width: 100%;
+      border-radius: 999px;
+      border: 1px solid #1f2937;
+      background: #020617;
+      color: #e5e7eb;
+      padding: 0.4rem 0.6rem;
+      font-size: 0.9rem;
+      box-sizing: border-box;
+    }
+    textarea {
+      border-radius: 0.5rem;
+      min-height: 50px;
+      resize: vertical;
+    }
+    .field {
+      margin-bottom: 0.6rem;
+    }
+    .inline {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .inline span.unit {
+      font-size: 0.8rem;
+      color: #6b7280;
+      white-space: nowrap;
+    }
+    .hint {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-top: 0.15rem;
+    }
+    .actions {
+      margin-top: 0.75rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    button {
+      border-radius: 999px;
+      border: none;
+      padding: 0.5rem 0.9rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .primary {
+      background: #2563eb;
+      color: white;
+    }
+    .secondary {
+      background: transparent;
+      color: #e5e7eb;
+      border: 1px solid #374151;
+    }
+    .error {
+      color: #ef4444;
+      font-size: 0.8rem;
+      margin-top: 0.25rem;
+      min-height: 1em;
+    }
+    .meeting-title {
+      font-size: 0.9rem;
+      color: #9ca3af;
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+    }
+    .meeting-title strong {
+      color: #e5e7eb;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid #2563eb;
+      background: rgba(37, 99, 235, 0.2);
+      font-size: 0.75rem;
+      color: #bfdbfe;
+      margin-bottom: 0.5rem;
+    }
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #22c55e;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.6rem;
+      margin-bottom: 0.75rem;
+    }
+    @media (min-width: 520px) {
+      .metrics {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+    .metric {
+      border-radius: 0.6rem;
+      border: 1px solid #1f2937;
+      padding: 0.45rem 0.6rem;
+      font-size: 0.8rem;
+    }
+    .metric-label {
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #9ca3af;
+      font-size: 0.7rem;
+      margin-bottom: 0.15rem;
+    }
+    .metric-value {
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      font-size: 0.95rem;
+    }
+    .metric-sub {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-top: 0.1rem;
+    }
+    .footer {
+      border-top: 1px solid #1f2937;
+      padding-top: 0.6rem;
+      margin-top: 0.3rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      align-items: center;
+      font-size: 0.75rem;
+      color: #9ca3af;
+      flex-wrap: wrap;
+    }
+    .copy-status {
+      font-size: 0.75rem;
+      color: #22c55e;
+      min-height: 1em;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Möteskostnadskalkylator</h1>
+    <p class="subtitle">
+      Räkna ut vad ett möte kostar i tid och pengar – per tillfälle, per månad och per år.
+    </p>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Indata</h2>
+        <div class="field">
+          <label for="meetingTitle">Titel på mötet (valfritt)</label>
+          <input id="meetingTitle" type="text" placeholder="Exempel: Veckomöte med ledningsgrupp" />
+        </div>
+
+        <div class="field">
+          <label for="participants">Antal deltagare</label>
+          <div class="inline">
+            <input id="participants" type="number" min="1" inputmode="numeric" placeholder="Ex. 8" />
+            <span class="unit">personer</span>
+          </div>
+          <div class="hint">Inkludera alla som deltar i mötet.</div>
+        </div>
+
+        <div class="field">
+          <label for="hourlyRate">Genomsnittlig timkostnad per person</label>
+          <div class="inline">
+            <input id="hourlyRate" type="number" min="0" step="50" inputmode="decimal" placeholder="Ex. 600" />
+            <span class="unit">kr/timme</span>
+          </div>
+          <div class="hint">Lön + sociala avgifter + overhead (grovt estimat).</div>
+        </div>
+
+        <div class="field">
+          <label for="durationMinutes">Möteslängd</label>
+          <div class="inline">
+            <input id="durationMinutes" type="number" min="1" inputmode="numeric" placeholder="Ex. 60" />
+            <span class="unit">minuter</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="frequency">Återkommande</label>
+          <select id="frequency">
+            <option value="once">Engångsmöte</option>
+            <option value="weekly">Varje vecka</option>
+            <option value="biweekly">Varannan vecka</option>
+            <option value="monthly">Varje månad</option>
+          </select>
+          <div class="hint">Välj hur ofta mötet hålls under året.</div>
+        </div>
+
+        <div class="field">
+          <label for="notes">Anteckning (valfritt)</label>
+          <textarea id="notes" placeholder="Exempel: Återkommande statusmöte där hälften av tiden går åt till upprepningar."></textarea>
+        </div>
+
+        <div id="error" class="error"></div>
+
+        <div class="actions">
+          <button class="primary" id="calculateBtn" type="button">Beräkna möteskostnad</button>
+          <button class="secondary" id="resetBtn" type="button">Återställ</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Resultat</h2>
+        <p class="meeting-title" id="meetingTitleDisplay">Ingen beräkning gjord ännu.</p>
+        <div class="badge" id="badgeFrequency" style="display:none;">
+          <span class="badge-dot"></span>
+          <span id="frequencyLabel"></span>
+        </div>
+
+        <div class="metrics">
+          <div class="metric">
+            <div class="metric-label">Kostnad per möte</div>
+            <div class="metric-value" id="costPerMeeting">–</div>
+            <div class="metric-sub" id="costPerParticipant">–</div>
+          </div>
+          <div class="metric" id="costPerMonthCard">
+            <div class="metric-label">Per månad</div>
+            <div class="metric-value" id="costPerMonth">–</div>
+            <div class="metric-sub">Baserat på vald frekvens</div>
+          </div>
+          <div class="metric" id="costPerYearCard">
+            <div class="metric-label">Per år</div>
+            <div class="metric-value" id="costPerYear">–</div>
+            <div class="metric-sub">Summerad årskostnad</div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <span>Använd som underlag i dialoger om möteskultur och effektivisering.</span>
+          <div>
+            <button class="secondary" id="copyBtn" type="button">Kopiera sammanfattning</button>
+            <div id="copyStatus" class="copy-status"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const participantsInput = document.getElementById("participants");
+      const hourlyRateInput = document.getElementById("hourlyRate");
+      const durationMinutesInput = document.getElementById("durationMinutes");
+      const frequencySelect = document.getElementById("frequency");
+      const meetingTitleInput = document.getElementById("meetingTitle");
+      const notesInput = document.getElementById("notes");
+
+      const errorEl = document.getElementById("error");
+
+      const meetingTitleDisplay = document.getElementById("meetingTitleDisplay");
+      const frequencyLabel = document.getElementById("frequencyLabel");
+      const badgeFrequency = document.getElementById("badgeFrequency");
+
+      const costPerMeetingEl = document.getElementById("costPerMeeting");
+      const costPerParticipantEl = document.getElementById("costPerParticipant");
+      const costPerMonthEl = document.getElementById("costPerMonth");
+      const costPerYearEl = document.getElementById("costPerYear");
+      const costPerMonthCard = document.getElementById("costPerMonthCard");
+      const costPerYearCard = document.getElementById("costPerYearCard");
+
+      const calculateBtn = document.getElementById("calculateBtn");
+      const resetBtn = document.getElementById("resetBtn");
+      const copyBtn = document.getElementById("copyBtn");
+      const copyStatus = document.getElementById("copyStatus");
+
+      function formatCurrency(value) {
+        if (!isFinite(value)) return "–";
+        try {
+          return new Intl.NumberFormat("sv-SE", {
+            style: "currency",
+            currency: "SEK",
+            maximumFractionDigits: 0,
+          }).format(value);
+        } catch (e) {
+          return Math.round(value).toLocaleString("sv-SE") + " kr";
+        }
+      }
+
+      function getFrequencyMeta(value) {
+        switch (value) {
+          case "weekly":
+            return { label: "Återkommande möte – varje vecka (~52 ggr/år)", meetingsPerYear: 52 };
+          case "biweekly":
+            return { label: "Återkommande möte – varannan vecka (~26 ggr/år)", meetingsPerYear: 26 };
+          case "monthly":
+            return { label: "Återkommande möte – varje månad (12 ggr/år)", meetingsPerYear: 12 };
+          case "once":
+          default:
+            return { label: "Engångsmöte", meetingsPerYear: 1 };
+        }
+      }
+
+      function validateInputs() {
+        errorEl.textContent = "";
+
+        const participants = Number(participantsInput.value);
+        const hourlyRate = Number(hourlyRateInput.value);
+        const durationMinutes = Number(durationMinutesInput.value);
+
+        if (!participants || participants <= 0) {
+          errorEl.textContent = "Ange ett giltigt antal deltagare (> 0).";
+          return false;
+        }
+        if (!hourlyRate || hourlyRate <= 0) {
+          errorEl.textContent = "Ange en rimlig genomsnittlig timkostnad per person (> 0).";
+          return false;
+        }
+        if (!durationMinutes || durationMinutes <= 0) {
+          errorEl.textContent = "Ange en giltig möteslängd i minuter (> 0).";
+          return false;
+        }
+        return true;
+      }
+
+      function calculate() {
+        if (!validateInputs()) return;
+
+        const participants = Number(participantsInput.value);
+        const hourlyRate = Number(hourlyRateInput.value);
+        const durationMinutes = Number(durationMinutesInput.value);
+        const frequency = frequencySelect.value;
+        const title = meetingTitleInput.value.trim();
+
+        const durationHours = durationMinutes / 60;
+        const costPerMeeting = participants * hourlyRate * durationHours;
+        const costPerParticipant = participants > 0 ? costPerMeeting / participants : 0;
+
+        const meta = getFrequencyMeta(frequency);
+        const costPerYear = costPerMeeting * meta.meetingsPerYear;
+        const costPerMonth = costPerYear / 12;
+
+        meetingTitleDisplay.textContent = title
+          ? 'Beräkning för "' + title + '".'
+          : "Beräkning för valt möte (ingen titel angiven).";
+
+        costPerMeetingEl.textContent = formatCurrency(costPerMeeting);
+        costPerParticipantEl.textContent = "≈ " + formatCurrency(costPerParticipant) + " per deltagare";
+
+        if (frequency === "once") {
+          badgeFrequency.style.display = "inline-flex";
+          frequencyLabel.textContent = meta.label;
+          costPerMonthCard.style.display = "none";
+          costPerYearCard.style.display = "none";
+        } else {
+          badgeFrequency.style.display = "inline-flex";
+          frequencyLabel.textContent = meta.label;
+          costPerMonthCard.style.display = "block";
+          costPerYearCard.style.display = "block";
+          costPerMonthEl.textContent = formatCurrency(costPerMonth);
+          costPerYearEl.textContent = formatCurrency(costPerYear);
+        }
+      }
+
+      function resetForm() {
+        meetingTitleInput.value = "";
+        participantsInput.value = "";
+        hourlyRateInput.value = "";
+        durationMinutesInput.value = "";
+        frequencySelect.value = "once";
+        notesInput.value = "";
+        errorEl.textContent = "";
+        meetingTitleDisplay.textContent = "Ingen beräkning gjord ännu.";
+        badgeFrequency.style.display = "none";
+        costPerMeetingEl.textContent = "–";
+        costPerParticipantEl.textContent = "–";
+        costPerMonthEl.textContent = "–";
+        costPerYearEl.textContent = "–";
+        costPerMonthCard.style.display = "block";
+        costPerYearCard.style.display = "block";
+        copyStatus.textContent = "";
+      }
+
+      function buildSummaryText() {
+        const participants = participantsInput.value || "–";
+        const hourlyRate = hourlyRateInput.value || "–";
+        const durationMinutes = durationMinutesInput.value || "–";
+        const frequency = frequencySelect.value;
+        const meta = getFrequencyMeta(frequency);
+        const title = meetingTitleInput.value.trim() || "Möte utan titel";
+        const notes = notesInput.value.trim();
+
+        const cMeeting = costPerMeetingEl.textContent || "–";
+        const cParticipant = costPerParticipantEl.textContent || "–";
+        const cMonth = costPerMonthEl.textContent || "–";
+        const cYear = costPerYearEl.textContent || "–";
+
+        let summary = "";
+        summary += "Sammanfattning av möteskostnad
+";
+        summary += "=================================
+
+";
+        summary += "Titel: " + title + "\n";
+        summary += "Antal deltagare: " + participants + "\n";
+        summary += "Genomsnittlig timkostnad per person: " + hourlyRate + " kr\n";
+        summary += "Möteslängd: " + durationMinutes + " minuter\n";
+        summary += "Frekvens: " + meta.label + "\n\n";
+        summary += "Kostnad per möte: " + cMeeting + "\n";
+        summary += "Kostnad per deltagare: " + cParticipant + "\n";
+        if (frequency !== "once") {
+          summary += "Kostnad per månad: " + cMonth + "\n";
+          summary += "Kostnad per år: " + cYear + "\n";
+        }
+        if (notes) {
+          summary += "\nKommentar/kontext:\n" + notes + "\n";
+        }
+        summary += "\nSkapad med Möteskostnadskalkylatorn (HTML/JS, GitHub Pages-kompatibel).";
+        return summary;
+      }
+
+      async function copySummary() {
+        const summary = buildSummaryText();
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(summary);
+          } else {
+            const textArea = document.createElement("textarea");
+            textArea.value = summary;
+            textArea.style.position = "fixed";
+            textArea.style.top = "-9999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+          }
+          copyStatus.textContent = "Sammanfattningen är kopierad till urklipp.";
+        } catch (e) {
+          copyStatus.textContent = "Kunde inte kopiera automatiskt – markera och kopiera manuellt.";
+        }
+      }
+
+      calculateBtn.addEventListener("click", calculate);
+      resetBtn.addEventListener("click", resetForm);
+      copyBtn.addEventListener("click", copySummary);
+    })();
+  </script>
+</body>
+</html>
