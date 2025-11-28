@@ -263,7 +263,8 @@
   <div class="container">
     <h1>Möteskostnadskalkylator</h1>
     <p class="subtitle">
-      Räkna ut vad ett möte kostar i tid och pengar – per tillfälle, per månad och per år. Varje beräkning sparas i en lista nedan.
+      Fyll i genomsnittlig månadslön per person (brutto). Kalkylatorn räknar upp med sociala avgifter
+      och uppskattad arbetstid (160 h/månad) för att visa kostnad per möte, månad och år.
     </p>
 
     <div class="grid">
@@ -284,12 +285,14 @@
         </div>
 
         <div class="field">
-          <label for="hourlyRate">Genomsnittlig timkostnad per person</label>
+          <label for="monthlySalary">Genomsnittlig månadslön per person (brutto)</label>
           <div class="inline">
-            <input id="hourlyRate" type="number" min="0" step="50" inputmode="decimal" placeholder="Ex. 600" />
-            <span class="unit">kr/timme</span>
+            <input id="monthlySalary" type="number" min="0" step="500" inputmode="decimal" placeholder="Ex. 40 000" />
+            <span class="unit">kr/månad</span>
           </div>
-          <div class="hint">Lön + sociala avgifter + overhead (grovt estimat).</div>
+          <div class="hint">
+            Bruttolön per person. Kalkylatorn lägger automatiskt på sociala avgifter och räknar om till timkostnad.
+          </div>
         </div>
 
         <div class="field">
@@ -370,8 +373,11 @@
 
   <script>
     (function () {
+      const MONTHLY_SOCIAL_RATE = 0.3142; // ≈31,42 % arbetsgivaravgift
+      const HOURS_PER_MONTH = 160;        // antagen arbetstid per månad
+
       const participantsInput = document.getElementById("participants");
-      const hourlyRateInput = document.getElementById("hourlyRate");
+      const monthlySalaryInput = document.getElementById("monthlySalary");
       const durationMinutesInput = document.getElementById("durationMinutes");
       const frequencySelect = document.getElementById("frequency");
       const meetingTitleInput = document.getElementById("meetingTitle");
@@ -396,7 +402,7 @@
       const savedListEl = document.getElementById("savedList");
       const savedEmptyEl = document.getElementById("savedEmpty");
 
-      const SAVED_KEY = "meetingCostSavedCalculations_v1";
+      const SAVED_KEY = "meetingCostSavedCalculations_v2"; // ny version pga ändrad logik
       let savedItems = [];
 
       function formatCurrency(value) {
@@ -430,15 +436,15 @@
         errorEl.textContent = "";
 
         const participants = Number(participantsInput.value);
-        const hourlyRate = Number(hourlyRateInput.value);
+        const monthlySalary = Number(monthlySalaryInput.value);
         const durationMinutes = Number(durationMinutesInput.value);
 
         if (!participants || participants <= 0) {
           errorEl.textContent = "Ange ett giltigt antal deltagare (> 0).";
           return false;
         }
-        if (!hourlyRate || hourlyRate <= 0) {
-          errorEl.textContent = "Ange en rimlig genomsnittlig timkostnad per person (> 0).";
+        if (!monthlySalary || monthlySalary <= 0) {
+          errorEl.textContent = "Ange en rimlig genomsnittlig månadslön per person (> 0).";
           return false;
         }
         if (!durationMinutes || durationMinutes <= 0) {
@@ -448,22 +454,26 @@
         return true;
       }
 
-      function buildSummaryText(meta, title, participants, hourlyRate, durationMinutes, frequency, notes, costPerMeeting, costPerParticipant, costPerMonth, costPerYear) {
+      function buildSummaryText(meta, title, participants, monthlySalary, durationMinutes, frequency, notes, employerMonthlyCost, hourlyCost, costPerMeetingStr, costPerParticipantStr, costPerMonthStr, costPerYearStr) {
         let summary = "";
         summary += "Sammanfattning av möteskostnad\n";
         summary += "=================================\n\n";
         summary += "Titel: " + title + "\n";
         summary += "Antal deltagare: " + participants + "\n";
-        summary += "Genomsnittlig timkostnad per person: " + hourlyRate + " kr\n";
+        summary += "Genomsnittlig månadslön per person (brutto): " + monthlySalary.toLocaleString("sv-SE") + " kr\n";
+        summary += "Antagen arbetsgivaravgift: " + (MONTHLY_SOCIAL_RATE * 100).toFixed(2) + " %\n";
+        summary += "Kostnad per person inkl. sociala avgifter: " + formatCurrency(employerMonthlyCost) + " / månad\n";
+        summary += "Antagen arbetstid: " + HOURS_PER_MONTH + " timmar per månad\n";
+        summary += "Beräknad timkostnad per person (inkl. sociala avgifter): " + formatCurrency(hourlyCost) + " / timme\n\n";
         summary += "Möteslängd: " + durationMinutes + " minuter\n";
         summary += "Frekvens: " + meta.label + "\n\n";
-        summary += "Kostnad per möte: " + costPerMeeting + "\n";
-        summary += "Kostnad per deltagare: " + costPerParticipant + "\n";
+        summary += "Kostnad per möte: " + costPerMeetingStr + "\n";
+        summary += "Kostnad per deltagare: " + costPerParticipantStr + "\n";
         if (frequency !== "once") {
-          summary += "Kostnad per månad: " + costPerMonth + "\n";
-          summary += "Kostnad per år: " + costPerYear + "\n";
+          summary += "Kostnad per månad (möten): " + costPerMonthStr + "\n";
+          summary += "Kostnad per år (möten): " + costPerYearStr + "\n";
         } else {
-          summary += "Månad-/årskostnad beräknas ej (engångsmöte).\n";
+          summary += "Månad-/årskostnad för möten beräknas ej (engångsmöte).\n";
         }
         if (notes) {
           summary += "\nKommentar/kontext:\n" + notes + "\n";
@@ -548,8 +558,7 @@
           id: Date.now().toString(36) + Math.random().toString(16).slice(2),
           title: data.title || "Möte utan titel",
           participants: data.participants,
-          hourlyRate: data.hourlyRate,
-          durationMinutes: data.durationMinutes,
+          monthlySalary: data.monthlySalary,
           frequency: data.frequency,
           frequencyLabel: meta.label,
           costPerMeeting: data.costPerMeeting,
@@ -558,7 +567,6 @@
           createdAt: new Date().toISOString()
         };
         savedItems.unshift(item);
-        // Begränsa till t.ex. 50 poster
         if (savedItems.length > 50) {
           savedItems = savedItems.slice(0, 50);
         }
@@ -578,14 +586,18 @@
         if (!validateInputs()) return;
 
         const participants = Number(participantsInput.value);
-        const hourlyRate = Number(hourlyRateInput.value);
+        const monthlySalary = Number(monthlySalaryInput.value);
         const durationMinutes = Number(durationMinutesInput.value);
         const frequency = frequencySelect.value;
         const title = meetingTitleInput.value.trim();
         const notes = notesInput.value.trim();
 
+        // Omvandling: månadslön -> månadskostnad inkl. sociala avgifter -> timkostnad
+        const employerMonthlyCost = monthlySalary * (1 + MONTHLY_SOCIAL_RATE);
+        const hourlyCost = employerMonthlyCost / HOURS_PER_MONTH;
+
         const durationHours = durationMinutes / 60;
-        const costPerMeetingNum = participants * hourlyRate * durationHours;
+        const costPerMeetingNum = participants * hourlyCost * durationHours;
         const costPerParticipantNum = participants > 0 ? costPerMeetingNum / participants : 0;
 
         const meta = getFrequencyMeta(frequency);
@@ -605,23 +617,23 @@
         badgeFrequency.style.display = "inline-flex";
         frequencyLabel.textContent = meta.label;
 
-        costPerMeetingEl.textContent = formatCurrency(costPerMeetingNum);
-        costPerParticipantEl.textContent = "≈ " + formatCurrency(costPerParticipantNum) + " per deltagare";
+        const costPerMeetingStr = formatCurrency(costPerMeetingNum);
+        const costPerParticipantStr = "≈ " + formatCurrency(costPerParticipantNum) + " per deltagare";
+        const costPerMonthStr =
+          frequency !== "once" ? formatCurrency(costPerMonthNum) : "– (engångsmöte)";
+        const costPerYearStr =
+          frequency !== "once" ? formatCurrency(costPerYearNum) : "– (engångsmöte)";
 
-        if (frequency !== "once") {
-          costPerMonthEl.textContent = formatCurrency(costPerMonthNum);
-          costPerYearEl.textContent = formatCurrency(costPerYearNum);
-        } else {
-          costPerMonthEl.textContent = "– (engångsmöte)";
-          costPerYearEl.textContent = "– (engångsmöte)";
-        }
+        costPerMeetingEl.textContent = costPerMeetingStr;
+        costPerParticipantEl.textContent = costPerParticipantStr;
+        costPerMonthEl.textContent = costPerMonthStr;
+        costPerYearEl.textContent = costPerYearStr;
 
         // Spara som post i listan
         addSavedItem({
           title: title,
           participants: participants,
-          hourlyRate: hourlyRate,
-          durationMinutes: durationMinutes,
+          monthlySalary: monthlySalary,
           frequency: frequency,
           costPerMeeting: costPerMeetingNum,
           costPerMonth: costPerMonthNum,
@@ -633,16 +645,17 @@
           meta,
           title || "Möte utan titel",
           participants,
-          hourlyRate,
+          monthlySalary,
           durationMinutes,
           frequency,
           notes,
-          formatCurrency(costPerMeetingNum),
-          "≈ " + formatCurrency(costPerParticipantNum) + " per deltagare",
-          frequency !== "once" ? formatCurrency(costPerMonthNum) : "– (engångsmöte)",
-          frequency !== "once" ? formatCurrency(costPerYearNum) : "– (engångsmöte)"
+          employerMonthlyCost,
+          hourlyCost,
+          costPerMeetingStr,
+          costPerParticipantStr,
+          costPerMonthStr,
+          costPerYearStr
         );
-        // Spara summary temporärt på elementet för återanvändning vid kopiera
         copyBtn.dataset.summary = summary;
         copyStatus.textContent = "";
       }
@@ -650,7 +663,7 @@
       function resetForm() {
         meetingTitleInput.value = "";
         participantsInput.value = "";
-        hourlyRateInput.value = "";
+        monthlySalaryInput.value = "";
         durationMinutesInput.value = "";
         frequencySelect.value = "once";
         notesInput.value = "";
